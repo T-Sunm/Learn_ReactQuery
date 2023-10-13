@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Modal from '../UI/Modal.jsx';
 import EventForm from './EventForm.jsx';
 import { useMutation } from '@tanstack/react-query';
-import { createNewEvents } from '../../utils/http.js';
+import { createNewEvents, queryclient } from '../../utils/http.js';
 import ErrorBlock from '../UI/ErrorBlock.jsx';
 
 export default function NewEvent() {
@@ -11,7 +11,16 @@ export default function NewEvent() {
 
   // 
   const {mutate,error,isLoading,isError} = useMutation({
-    mutationFn:createNewEvents
+    mutationFn:createNewEvents,
+    onSuccess:() =>{
+      // khi submỉt thành công :
+      // + đánh dấu là dữ liệu lưu trong cache đã cũ
+      queryclient.invalidateQueries({queryKey:['events'],/* exact : true sẽ chỉ định chính xác nó , 
+                                                                    kh tính thành phần phụ sau nó */
+      });
+      // điều hướng qua page khác
+      navigate('/events')
+    }
   });
 
   function handleSubmit(formData) {
