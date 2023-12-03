@@ -8,8 +8,9 @@ import { fetchEvents } from '../../utils/http.js';
 
 export default function NewEventsSection() {
     const {data, isPending , isError , error, refetch} = useQuery({
-      queryKey:['events'],
-      queryFn:fetchEvents,
+      queryKey:['events' , {max:3}],
+      // sài toán tử "..." để sao chép và lấy phẩn tử mảng [1](là max:3)
+      queryFn:({signal,queryKey}) =>fetchEvents({signal , ...queryKey[1]}),
       staleTime:5000,
       // cacheTime: Kiểm soát thời gian mà một kết quả truy vấn còn tồn tại 
       //trong bộ nhớ cache sau khi nó trở nên không còn sử dụng.

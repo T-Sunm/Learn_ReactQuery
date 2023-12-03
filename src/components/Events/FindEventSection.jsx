@@ -23,7 +23,7 @@ export default function FindEventSection() {
   // và có thêm vài thuộc tính bổ sung như signal...
   // nên phải xài {searchTerm} thay vì searchTerm
     // signal được sử dụng để hủy bỏ yêu cầu fetch.
-    queryFn:({signal}) => fetchEvents({signal,searchTerm}),
+    queryFn:({signal,queryKey}) => fetchEvents({signal,...queryKey[1]}),
     enabled:searchTerm !== undefined
   })
 

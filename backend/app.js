@@ -1,14 +1,17 @@
 import fs from "node:fs/promises";
 
-import bodyParser from "body-parser";
 import express from "express";
+import mongoose from "mongoose";
+import Events from "./model/Events.js";
 
 const app = express();
 
-app.use(bodyParser.json());
+app.use(express.json());
+
 
 // set như này để có thể truy cập qua http://your_server_address/image.jpg
 app.use(express.static("public"));
+
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -23,10 +26,13 @@ app.use((req, res, next) => {
   next();
 });
 
+
+
+
+
 app.get("/events", async (req, res) => {
   const { max, search } = req.query;
-  const eventsFileContent = await fs.readFile("./data/events.json");
-  let events = JSON.parse(eventsFileContent);
+  let events = await Events.find()
 
   if (search) {
     events = events.filter((event) => {
@@ -59,21 +65,19 @@ app.get("/events/images", async (req, res) => {
 
 app.get("/events/:id", async (req, res) => {
   const { id } = req.params;
+  const events = await Events.findById(id);
 
-  const eventsFileContent = await fs.readFile("./data/events.json");
-  const events = JSON.parse(eventsFileContent);
-
-  const event = events.find((event) => event.id === id);
-
-  if (!event) {
+  if (!events) {
     return res
       .status(404)
       .json({ message: `For the id ${id}, no event could be found.` });
   }
 
   setTimeout(() => {
-    res.json({ event });
+    res.json({ events });
   }, 1000);
+
+
 });
 
 app.post("/events", async (req, res) => {
@@ -82,8 +86,6 @@ app.post("/events", async (req, res) => {
   if (!event) {
     return res.status(400).json({ message: "Event is required" });
   }
-
-  console.log(event);
 
   if (
     !event.title?.trim() ||
@@ -96,19 +98,16 @@ app.post("/events", async (req, res) => {
     return res.status(400).json({ message: "Invalid data provided." });
   }
 
-  const eventsFileContent = await fs.readFile("./data/events.json");
-  const events = JSON.parse(eventsFileContent);
+  const events = new Events(event)
 
-  const newEvent = {
-    id: Math.round(Math.random() * 10000).toString(),
-    ...event,
-  };
+  events.save()
+  .then((result)=>{
+    res.send(result)
+  })
+  .catch((err)=> {
+    console.log(err)
+  })
 
-  events.push(newEvent);
-
-  await fs.writeFile("./data/events.json", JSON.stringify(events));
-
-  res.json({ event: newEvent });
 });
 
 app.put("/events/:id", async (req, res) => {
@@ -130,48 +129,38 @@ app.put("/events/:id", async (req, res) => {
     return res.status(400).json({ message: "Invalid data provided." });
   }
 
-  const eventsFileContent = await fs.readFile("./data/events.json");
-  const events = JSON.parse(eventsFileContent);
+   try {
+    // Tìm và cập nhật sự kiện trong cơ sở dữ liệu bằng Mongoose
+    const updatedEvent = await Events.findByIdAndUpdate(id, event, {
+      new: true, // Trả về sự kiện đã được cập nhật
+    });
 
-  const eventIndex = events.findIndex((event) => event.id === id);
+    if (!updatedEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
 
-  if (eventIndex === -1) {
-    return res.status(404).json({ message: "Event not found" });
+    res.json({ event: updatedEvent });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error updating event" });
   }
-
-  events[eventIndex] = {
-    id,
-    ...event,
-  };
-
-  await fs.writeFile("./data/events.json", JSON.stringify(events));
-
-  setTimeout(() => {
-    res.json({ event: events[eventIndex] });
-  }, 1000);
 });
 
 app.delete("/events/:id", async (req, res) => {
   const { id } = req.params;
 
-  const eventsFileContent = await fs.readFile("./data/events.json");
-  const events = JSON.parse(eventsFileContent);
-
-  const eventIndex = events.findIndex((event) => event.id === id);
-
-  if (eventIndex === -1) {
-    return res.status(404).json({ message: "Event not found" });
-  }
-
-  events.splice(eventIndex, 1);
-
-  await fs.writeFile("./data/events.json", JSON.stringify(events));
-
+   const deletedEvent = await Events.deleteOne({ _id: id });
   setTimeout(() => {
     res.json({ message: "Event deleted" });
   }, 1000);
 });
 
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
-});
+const dbURI = "mongodb+srv://root:ahihi123@cluster0.rsl64jc.mongodb.net/Event?retryWrites=true&w=majority"
+mongoose.connect(dbURI)
+.then((result)=> {
+  app.listen(3000, () => { console.log('Server is running on port 3000'); })
+  console.log('connected to db')
+})
+.catch((err)=> console.log(err))
+
+
