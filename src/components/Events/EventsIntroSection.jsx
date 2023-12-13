@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 
 import meetupImg from '../../assets/meetup.jpg';
+import { useSelector } from 'react-redux';
 
 export default function EventsIntroSection() {
+  const authenticated = useSelector((state) => state.auth.authenticated)
+
   return (
     <section
       className="content-section"
@@ -14,11 +17,11 @@ export default function EventsIntroSection() {
         or <strong>find a new passion</strong>
       </h2>
       <p>Anyone can organize and join events on React Event!</p>
-      <p>
-        <Link to="/events/new" className="button">
+      {authenticated && (<p>
+        <Link to="/events/new" className="button" >
           Create your first event
         </Link>
-      </p>
+      </p>)}
     </section>
   );
 }
